@@ -22,6 +22,15 @@
 
   --color-amber-warn: #c98a2c;
   --color-coral-low: #d97757;
+
+  /* Savings accent: distinct from the brand teal and the warning tones */
+  --color-plum-50: #f5f2fa;
+  --color-plum-100: #e8e1f3;
+  --color-plum-300: #b6a3dc;
+  --color-plum-400: #8f76c4;
+  --color-plum-500: #7059ab;
+  --color-plum-700: #4a3a72;
+  --color-plum-900: #2e2548;
 }
 
 :root {

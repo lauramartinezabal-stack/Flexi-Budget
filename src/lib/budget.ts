@@ -6,7 +6,7 @@ import {
   startOfWeek,
   subWeeks,
 } from 'date-fns'
-import type { Category, FixedExpense, IncomeEntry, VariableExpense } from '../types'
+import type { Category, FixedExpense, IncomeEntry, SavingsGoal, VariableExpense } from '../types'
 import { CATEGORIES } from '../types'
 
 const WEEK_OPTIONS = { weekStartsOn: 1 as const } // Monday
@@ -42,11 +42,14 @@ export interface BudgetSummary {
   totalIncome: number
   totalVariableSpent: number
   totalPaidFixed: number
-  /** cash on hand, before setting anything aside for upcoming fixed expenses */
+  totalSaved: number
+  /** cash on hand, before setting anything aside for bills or savings goals */
   currentBalance: number
   /** sum of money actually reserved across all unpaid fixed expenses */
   totalReserved: number
-  /** cash on hand minus what's reserved for upcoming fixed expenses */
+  /** sum of money actually reserved across all unfinished savings goals */
+  totalReservedSavings: number
+  /** cash on hand minus what's reserved for bills and savings goals */
   freeBalance: number
   /** number of weeks the free balance is spread across */
   horizonWeeks: number
@@ -54,6 +57,8 @@ export interface BudgetSummary {
   weeklyAvailable: number
   /** reserved amount per fixed expense id */
   reservations: Record<string, ReservationResult>
+  /** reserved amount per savings goal id */
+  savingsReservations: Record<string, ReservationResult>
   /** nearest unpaid fixed expense due date driving the horizon, if any */
   nearestDueDate: string | null
 }
@@ -62,6 +67,7 @@ export function computeBudget(
   incomes: IncomeEntry[],
   fixedExpenses: FixedExpense[],
   variableExpenses: VariableExpense[],
+  savingsGoals: SavingsGoal[],
   defaultHorizonWeeks: number,
   asOf: Date = new Date(),
 ): BudgetSummary {
@@ -70,8 +76,11 @@ export function computeBudget(
   const paidFixed = fixedExpenses.filter((e) => e.paid)
   const unpaidFixed = fixedExpenses.filter((e) => !e.paid)
   const totalPaidFixed = paidFixed.reduce((sum, e) => sum + e.amount, 0)
+  const achievedGoals = savingsGoals.filter((g) => g.achieved)
+  const unachievedGoals = savingsGoals.filter((g) => !g.achieved)
+  const totalSaved = achievedGoals.reduce((sum, g) => sum + g.targetAmount, 0)
 
-  const currentBalance = totalIncome - totalVariableSpent - totalPaidFixed
+  const currentBalance = totalIncome - totalVariableSpent - totalPaidFixed - totalSaved
 
   // Fund whichever bill is due soonest first: it's the one that can't wait on
   // future income arriving in time. Later bills get whatever cash is left.
@@ -89,7 +98,32 @@ export function computeBudget(
     }
   }
   const totalReserved = Object.values(reservations).reduce((sum, r) => sum + r.reserved, 0)
-  const freeBalance = currentBalance - totalReserved
+
+  // Savings goals only get whatever's left after bills: goals with a target
+  // date go first (soonest first), undated goals fill in after, oldest first.
+  const goalsByPriority = [...unachievedGoals].sort((a, b) => {
+    if (a.targetDate && b.targetDate) {
+      return parseDate(a.targetDate).getTime() - parseDate(b.targetDate).getTime()
+    }
+    if (a.targetDate) return -1
+    if (b.targetDate) return 1
+    return a.createdAt.localeCompare(b.createdAt)
+  })
+  const savingsReservations: Record<string, ReservationResult> = {}
+  for (const goal of goalsByPriority) {
+    const reserved = Math.min(goal.targetAmount, remainingCash)
+    remainingCash -= reserved
+    savingsReservations[goal.id] = {
+      reserved,
+      coverage: goal.targetAmount > 0 ? reserved / goal.targetAmount : 1,
+    }
+  }
+  const totalReservedSavings = Object.values(savingsReservations).reduce(
+    (sum, r) => sum + r.reserved,
+    0,
+  )
+
+  const freeBalance = currentBalance - totalReserved - totalReservedSavings
 
   const upcoming = unpaidFixed
     .filter((e) => differenceInCalendarDays(parseDate(e.dueDate), asOf) >= 0)
@@ -109,12 +143,15 @@ export function computeBudget(
     totalIncome,
     totalVariableSpent,
     totalPaidFixed,
+    totalSaved,
     currentBalance,
     totalReserved,
+    totalReservedSavings,
     freeBalance,
     horizonWeeks,
     weeklyAvailable,
     reservations,
+    savingsReservations,
     nearestDueDate,
   }
 }
@@ -143,6 +180,61 @@ export function computeAverageWeeklySpend(
   const weeks = Math.max(1, differenceInCalendarWeeks(asOf, parseDate(earliest), WEEK_OPTIONS) + 1)
   const total = variableExpenses.reduce((sum, e) => sum + e.amount, 0)
   return total / weeks
+}
+
+export interface CategoryCapItem extends CategoryBreakdownItem {
+  /** suggested cap for this category out of this week's available amount */
+  cap: number
+  /** what's been spent in this category so far this (current, in-progress) week */
+  spentThisWeek: number
+  /** cap minus spent, floored at 0 */
+  remaining: number
+  /** how much spending exceeds the cap, 0 if under */
+  over: number
+}
+
+/**
+ * Splits "available this week" across categories using the user's own
+ * historical spending ratio, so essentials that are usually funded (like
+ * food) don't quietly get crowded out by one-off discretionary spending.
+ * Falls back to an even split until there's enough history to learn from.
+ */
+export function computeCategorySplit(
+  weeklyAvailable: number,
+  variableExpenses: VariableExpense[],
+  asOf: Date = new Date(),
+): { items: CategoryCapItem[]; isPersonalized: boolean } {
+  const spendableThisWeek = Math.max(0, weeklyAvailable)
+  const { start, end } = getCurrentWeekRange(asOf)
+  const spentThisWeekByCategory = getCategoryBreakdownForRange(variableExpenses, start, end)
+
+  const historyTotal = variableExpenses.reduce((sum, e) => sum + e.amount, 0)
+  const isPersonalized = historyTotal > 0
+  const historyByCategory = new Map<Category, number>()
+  for (const c of CATEGORIES) historyByCategory.set(c.id, 0)
+  for (const e of variableExpenses) {
+    historyByCategory.set(e.category, (historyByCategory.get(e.category) ?? 0) + e.amount)
+  }
+
+  const items: CategoryCapItem[] = CATEGORIES.map((c) => {
+    const ratio = isPersonalized ? (historyByCategory.get(c.id) ?? 0) / historyTotal : 1 / CATEGORIES.length
+    const cap = spendableThisWeek * ratio
+    const spentThisWeek =
+      spentThisWeekByCategory.items.find((i) => i.category === c.id)?.total ?? 0
+    return {
+      category: c.id,
+      label: c.label,
+      icon: c.icon,
+      total: spentThisWeek,
+      percent: spendableThisWeek > 0 ? cap / spendableThisWeek : 0,
+      cap,
+      spentThisWeek,
+      remaining: Math.max(0, cap - spentThisWeek),
+      over: Math.max(0, spentThisWeek - cap),
+    }
+  })
+
+  return { items, isPersonalized }
 }
 
 export function getCategoryBreakdownForRange(

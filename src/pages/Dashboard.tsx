@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
-import { computeAverageWeeklySpend, computeBudget, getCategoryBreakdown } from '../lib/budget'
+import { computeAverageWeeklySpend, computeBudget, computeCategorySplit } from '../lib/budget'
 import { formatCurrency, formatDateShort } from '../lib/format'
 import { Card } from '../components/Card'
 import { ProgressBar } from '../components/ProgressBar'
@@ -20,19 +20,36 @@ export default function Dashboard() {
   const incomes = useAppStore((s) => s.incomes)
   const fixedExpenses = useAppStore((s) => s.fixedExpenses)
   const variableExpenses = useAppStore((s) => s.variableExpenses)
+  const savingsGoals = useAppStore((s) => s.savingsGoals)
   const settings = useAppStore((s) => s.settings)
   const toggleFixedExpensePaid = useAppStore((s) => s.toggleFixedExpensePaid)
+  const toggleSavingsGoalAchieved = useAppStore((s) => s.toggleSavingsGoalAchieved)
 
   const now = useMemo(() => new Date(), [])
   const summary = useMemo(
-    () => computeBudget(incomes, fixedExpenses, variableExpenses, settings.defaultHorizonWeeks, now),
-    [incomes, fixedExpenses, variableExpenses, settings.defaultHorizonWeeks, now],
+    () =>
+      computeBudget(
+        incomes,
+        fixedExpenses,
+        variableExpenses,
+        savingsGoals,
+        settings.defaultHorizonWeeks,
+        now,
+      ),
+    [incomes, fixedExpenses, variableExpenses, savingsGoals, settings.defaultHorizonWeeks, now],
   )
-  const breakdown = useMemo(() => getCategoryBreakdown(variableExpenses, now), [variableExpenses, now])
+  const categorySplit = useMemo(
+    () => computeCategorySplit(summary.weeklyAvailable, variableExpenses, now),
+    [summary.weeklyAvailable, variableExpenses, now],
+  )
+  const weeklySpent = categorySplit.items.reduce((sum, i) => sum + i.spentThisWeek, 0)
 
   const unpaidUpcoming = fixedExpenses
     .filter((e) => !e.paid)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  const unachievedGoals = savingsGoals
+    .filter((g) => !g.achieved)
+    .sort((a, b) => (a.targetDate ?? '9999').localeCompare(b.targetDate ?? '9999'))
 
   const avgWeeklySpend = useMemo(() => computeAverageWeeklySpend(variableExpenses, now), [variableExpenses, now])
   const tone = heroTone(summary.weeklyAvailable, avgWeeklySpend, incomes.length > 0)
@@ -118,13 +135,64 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Spending by category" className="pb-5">
-          <CategoryDonut items={breakdown.items} total={breakdown.total} />
-          {breakdown.isFallbackAllTime && breakdown.total > 0 && (
-            <p className="text-[11px] text-gray-400 mt-3">
-              No spending logged this week yet — showing all-time totals.
+        <Card
+          title="Savings goals"
+          action={
+            <Link to="/add?type=savings" className="text-plum-500 text-[13px] font-semibold hover:underline">
+              + Add
+            </Link>
+          }
+        >
+          {unachievedGoals.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No goals yet. Add one and we'll set money aside for it once your bills are covered.
             </p>
+          ) : (
+            <ul className="space-y-4">
+              {unachievedGoals.map((goal) => {
+                const r = summary.savingsReservations[goal.id]
+                const reserved = r?.reserved ?? 0
+                const pct = goal.targetAmount > 0 ? reserved / goal.targetAmount : 0
+                const complete = pct >= 1
+                return (
+                  <li key={goal.id}>
+                    <div className="flex items-center justify-between text-[14px]">
+                      <span className="font-medium text-brand-900">🐷 {goal.name}</span>
+                      <span className="text-gray-500">
+                        {goal.targetDate ? formatDateShort(goal.targetDate) : 'No deadline'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 mb-1.5">
+                      <span className="text-[12px] text-gray-400">
+                        {formatCurrency(reserved)} saved of {formatCurrency(goal.targetAmount)}
+                      </span>
+                      {complete && (
+                        <button
+                          onClick={() => toggleSavingsGoalAchieved(goal.id)}
+                          className="text-[11px] font-semibold text-plum-500 hover:text-plum-700"
+                        >
+                          Mark achieved
+                        </button>
+                      )}
+                    </div>
+                    <ProgressBar
+                      progress={pct}
+                      colorClassName={complete ? 'bg-plum-500' : 'bg-plum-300'}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
           )}
+        </Card>
+
+        <Card title="This week's plan" className="pb-5">
+          <CategoryDonut items={categorySplit.items} total={weeklySpent} showCaps />
+          <p className="text-[11px] text-gray-400 mt-3">
+            {categorySplit.isPersonalized
+              ? "Caps are based on your usual spending split, so essentials stay covered."
+              : 'Starting with an even split across categories — this will adapt to your habits.'}
+          </p>
         </Card>
       </div>
     </div>

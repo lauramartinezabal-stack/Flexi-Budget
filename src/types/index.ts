@@ -24,6 +24,15 @@ export interface FixedExpense {
   paid: boolean
 }
 
+export interface SavingsGoal {
+  id: string
+  name: string
+  targetAmount: number
+  targetDate?: string // ISO date (yyyy-MM-dd), optional
+  createdAt: string // ISO timestamp
+  achieved: boolean
+}
+
 export interface VariableExpense {
   id: string
   amount: number

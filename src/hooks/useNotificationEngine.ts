@@ -16,6 +16,7 @@ export function useNotificationEngine() {
   const incomes = useAppStore((s) => s.incomes)
   const fixedExpenses = useAppStore((s) => s.fixedExpenses)
   const variableExpenses = useAppStore((s) => s.variableExpenses)
+  const savingsGoals = useAppStore((s) => s.savingsGoals)
   const settings = useAppStore((s) => s.settings)
   const addNotificationIfNew = useAppStore((s) => s.addNotificationIfNew)
 
@@ -25,6 +26,7 @@ export function useNotificationEngine() {
       incomes,
       fixedExpenses,
       variableExpenses,
+      savingsGoals,
       settings.defaultHorizonWeeks,
       now,
     )
@@ -50,5 +52,5 @@ export function useNotificationEngine() {
     )
     for (const n of approaching) addNotificationIfNew(n)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomes, fixedExpenses, variableExpenses, settings.defaultHorizonWeeks])
+  }, [incomes, fixedExpenses, variableExpenses, savingsGoals, settings.defaultHorizonWeeks])
 }

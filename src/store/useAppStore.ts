@@ -7,6 +7,7 @@ import type {
   Category,
   FixedExpense,
   IncomeEntry,
+  SavingsGoal,
   Settings,
   VariableExpense,
 } from '../types'
@@ -15,6 +16,7 @@ interface AppState {
   incomes: IncomeEntry[]
   fixedExpenses: FixedExpense[]
   variableExpenses: VariableExpense[]
+  savingsGoals: SavingsGoal[]
   notifications: AppNotification[]
   settings: Settings
 
@@ -33,6 +35,10 @@ interface AppState {
   }) => void
   removeVariableExpense: (id: string) => void
 
+  addSavingsGoal: (input: { name: string; targetAmount: number; targetDate?: string }) => void
+  removeSavingsGoal: (id: string) => void
+  toggleSavingsGoalAchieved: (id: string) => void
+
   addNotificationIfNew: (notification: Omit<AppNotification, 'read'>) => void
   markNotificationRead: (id: string) => void
   markAllNotificationsRead: () => void
@@ -46,6 +52,7 @@ export const useAppStore = create<AppState>()(
       incomes: [],
       fixedExpenses: [],
       variableExpenses: [],
+      savingsGoals: [],
       notifications: [],
       settings: { defaultHorizonWeeks: 4 },
 
@@ -92,6 +99,29 @@ export const useAppStore = create<AppState>()(
       removeVariableExpense: (id) =>
         set((state) => ({
           variableExpenses: state.variableExpenses.filter((e) => e.id !== id),
+        })),
+
+      addSavingsGoal: (input) =>
+        set((state) => ({
+          savingsGoals: [
+            ...state.savingsGoals,
+            {
+              id: genId(),
+              createdAt: new Date().toISOString(),
+              achieved: false,
+              ...input,
+            },
+          ],
+        })),
+      removeSavingsGoal: (id) =>
+        set((state) => ({
+          savingsGoals: state.savingsGoals.filter((g) => g.id !== id),
+        })),
+      toggleSavingsGoalAchieved: (id) =>
+        set((state) => ({
+          savingsGoals: state.savingsGoals.map((g) =>
+            g.id === id ? { ...g, achieved: !g.achieved } : g,
+          ),
         })),
 
       addNotificationIfNew: (notification) => {

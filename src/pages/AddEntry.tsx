@@ -12,12 +12,16 @@ import {
   TextInput,
 } from '../components/FormFields'
 
-type EntryKind = 'income' | 'variable' | 'fixed'
+type EntryKind = 'income' | 'variable' | 'fixed' | 'savings'
+
+const VALID_KINDS: EntryKind[] = ['income', 'variable', 'fixed', 'savings']
 
 export default function AddEntry() {
   const [params] = useSearchParams()
   const preselect = params.get('type')
-  const initialKind: EntryKind = preselect === 'fixed' ? 'fixed' : preselect === 'variable' ? 'variable' : 'income'
+  const initialKind: EntryKind = VALID_KINDS.includes(preselect as EntryKind)
+    ? (preselect as EntryKind)
+    : 'income'
 
   const [kind, setKind] = useState<EntryKind>(initialKind)
 
@@ -31,13 +35,15 @@ export default function AddEntry() {
           options={[
             { value: 'income', label: 'Income' },
             { value: 'variable', label: 'Spent' },
-            { value: 'fixed', label: 'Upcoming bill' },
+            { value: 'fixed', label: 'Bill' },
+            { value: 'savings', label: 'Savings' },
           ]}
         />
         <div className="mt-5">
           {kind === 'income' && <IncomeForm />}
           {kind === 'variable' && <VariableForm />}
           {kind === 'fixed' && <FixedForm />}
+          {kind === 'savings' && <SavingsForm />}
         </div>
       </div>
     </div>
@@ -183,6 +189,58 @@ function FixedForm() {
       </p>
       <PrimaryButton type="submit" disabled={!canSubmit}>
         Add upcoming bill
+      </PrimaryButton>
+    </form>
+  )
+}
+
+function SavingsForm() {
+  const navigate = useNavigate()
+  const addSavingsGoal = useAppStore((s) => s.addSavingsGoal)
+  const [name, setName] = useState('')
+  const [amount, setAmount] = useState('')
+  const [targetDate, setTargetDate] = useState('')
+
+  const canSubmit = Number(amount) > 0 && name.trim().length > 0
+
+  function submit() {
+    if (!canSubmit) return
+    addSavingsGoal({
+      name: name.trim(),
+      targetAmount: Number(amount),
+      targetDate: targetDate || undefined,
+    })
+    navigate('/')
+  }
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        submit()
+      }}
+    >
+      <Field label="What are you saving for?">
+        <TextInput
+          placeholder="New laptop, trip home, emergency fund…"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+      </Field>
+      <Field label="Target amount">
+        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
+      </Field>
+      <Field label="Target date (optional)">
+        <TextInput type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} min={todayISO()} />
+      </Field>
+      <p className="text-[12px] text-gray-400 -mt-1">
+        We'll set money aside for this once your bills are covered — bills always come first. Add
+        a date to prioritize it over goals without one.
+      </p>
+      <PrimaryButton type="submit" disabled={!canSubmit}>
+        Add savings goal
       </PrimaryButton>
     </form>
   )

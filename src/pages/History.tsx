@@ -6,11 +6,11 @@ import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { SegmentedControl, TextInput } from '../components/FormFields'
 
-type TypeFilter = 'all' | 'income' | 'variable' | 'fixed'
+type TypeFilter = 'all' | 'income' | 'variable' | 'fixed' | 'savings'
 
 interface Row {
   id: string
-  kind: 'income' | 'variable' | 'fixed'
+  kind: 'income' | 'variable' | 'fixed' | 'savings'
   date: string
   label: string
   sub?: string
@@ -22,9 +22,11 @@ export default function History() {
   const incomes = useAppStore((s) => s.incomes)
   const variableExpenses = useAppStore((s) => s.variableExpenses)
   const fixedExpenses = useAppStore((s) => s.fixedExpenses)
+  const savingsGoals = useAppStore((s) => s.savingsGoals)
   const removeIncome = useAppStore((s) => s.removeIncome)
   const removeVariableExpense = useAppStore((s) => s.removeVariableExpense)
   const removeFixedExpense = useAppStore((s) => s.removeFixedExpense)
+  const removeSavingsGoal = useAppStore((s) => s.removeSavingsGoal)
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all')
@@ -56,8 +58,18 @@ export default function History() {
       sub: e.paid ? 'Paid' : 'Upcoming bill',
       amount: -e.amount,
     }))
-    return [...incomeRows, ...variableRows, ...fixedRows].sort((a, b) => b.date.localeCompare(a.date))
-  }, [incomes, variableExpenses, fixedExpenses])
+    const savingsRows: Row[] = savingsGoals.map((g) => ({
+      id: g.id,
+      kind: 'savings',
+      date: g.targetDate ?? g.createdAt.slice(0, 10),
+      label: g.name,
+      sub: g.achieved ? 'Achieved' : 'Savings goal',
+      amount: -g.targetAmount,
+    }))
+    return [...incomeRows, ...variableRows, ...fixedRows, ...savingsRows].sort((a, b) =>
+      b.date.localeCompare(a.date),
+    )
+  }, [incomes, variableExpenses, fixedExpenses, savingsGoals])
 
   const filtered = rows.filter((r) => {
     if (typeFilter !== 'all' && r.kind !== typeFilter) return false
@@ -71,6 +83,7 @@ export default function History() {
     if (row.kind === 'income') removeIncome(row.id)
     if (row.kind === 'variable') removeVariableExpense(row.id)
     if (row.kind === 'fixed') removeFixedExpense(row.id)
+    if (row.kind === 'savings') removeSavingsGoal(row.id)
   }
 
   return (
@@ -87,13 +100,14 @@ export default function History() {
                 { value: 'income', label: 'Income' },
                 { value: 'variable', label: 'Spent' },
                 { value: 'fixed', label: 'Bills' },
+                { value: 'savings', label: 'Savings' },
               ]}
             />
             <div className="flex gap-2">
               <TextInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="text-[13px] py-2" />
               <TextInput type="date" value={to} onChange={(e) => setTo(e.target.value)} className="text-[13px] py-2" />
             </div>
-            {typeFilter !== 'income' && (
+            {(typeFilter === 'all' || typeFilter === 'variable') && (
               <div className="flex flex-wrap gap-1.5">
                 <FilterChip active={categoryFilter === 'all'} onClick={() => setCategoryFilter('all')}>
                   All categories
@@ -124,9 +138,15 @@ export default function History() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span
-                      className={`text-[14px] font-semibold ${r.amount < 0 ? 'text-gray-600' : 'text-brand-600'}`}
+                      className={`text-[14px] font-semibold ${
+                        r.kind === 'savings'
+                          ? 'text-plum-500'
+                          : r.amount < 0
+                            ? 'text-gray-600'
+                            : 'text-brand-600'
+                      }`}
                     >
-                      {r.amount < 0 ? '-' : '+'}
+                      {r.kind === 'savings' ? '🐷 ' : r.amount < 0 ? '-' : '+'}
                       {formatCurrency(Math.abs(r.amount), true)}
                     </span>
                     <button
