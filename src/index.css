@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Calming palette — sage/teal primary, warm neutral background, no alarming reds unless truly critical */
+  --color-bg: #f7f6f2;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0efe9;
+  --color-ink: #1f2a24;
+  --color-ink-soft: #5c6b62;
+  --color-ink-faint: #8b9990;
+  --color-border: #e4e1d6;
+
+  --color-primary: #3f7d63;
+  --color-primary-soft: #e4efe8;
+  --color-primary-strong: #2e5f4a;
+
+  --color-accent: #6b8fa3;
+  --color-accent-soft: #e6eef2;
+
+  --color-warn: #c8862f;
+  --color-warn-soft: #f6ecd9;
+
+  --color-danger: #b9573f;
+  --color-danger-soft: #f5e4de;
+
+  --color-food: #6b8fa3;
+  --color-transport: #9b8bb4;
+  --color-leisure: #d4a24e;
+  --color-other: #8b9990;
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-bg);
+  position: relative;
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
