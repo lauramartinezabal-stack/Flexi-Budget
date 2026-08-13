@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Calming palette: sage / teal / sand. Red reserved for true danger only. */
+  --color-sage-50: #f3f7f3;
+  --color-sage-100: #e3ede3;
+  --color-sage-200: #c8dcc9;
+  --color-sage-300: #a2c4a5;
+  --color-sage-400: #79a67f;
+  --color-sage-500: #578a60;
+  --color-sage-600: #436f4b;
+  --color-sage-700: #37593e;
+  --color-sage-800: #2e4834;
+  --color-sage-900: #263c2b;
+
+  --color-teal-50: #f0f7f7;
+  --color-teal-100: #dbecec;
+  --color-teal-200: #b8dad9;
+  --color-teal-300: #8bc0bf;
+  --color-teal-400: #5da3a2;
+  --color-teal-500: #3f8685;
+  --color-teal-600: #326c6c;
+  --color-teal-700: #2b5758;
+  --color-teal-800: #264748;
+  --color-teal-900: #223c3d;
+
+  --color-sand-50: #faf8f4;
+  --color-sand-100: #f2ede1;
+  --color-sand-200: #e4d9c3;
+  --color-sand-300: #d2bf9c;
+  --color-sand-400: #bfa274;
+  --color-sand-500: #ab8a58;
+  --color-sand-600: #8f7148;
+  --color-sand-700: #755c3d;
+  --color-sand-800: #614d36;
+  --color-sand-900: #52412f;
+
+  --color-amber-glow-50: #fdf7ec;
+  --color-amber-glow-100: #faebc9;
+  --color-amber-glow-300: #f0c667;
+  --color-amber-glow-500: #d99f2e;
+  --color-amber-glow-700: #a5731a;
+
+  --color-coral-50: #fdf1ef;
+  --color-coral-100: #fbdcd7;
+  --color-coral-300: #ef9d90;
+  --color-coral-500: #dd6552;
+  --color-coral-700: #b0432f;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--color-sand-50);
+  color: var(--color-sage-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #14201a;
+    color: var(--color-sage-100);
+  }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
