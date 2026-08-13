@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Calm, warm palette. Sage green primary, no alarming reds unless truly critical. */
+  --color-bg: #faf8f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2efe8;
+  --color-border: #e8e3d8;
+
+  --color-ink: #2b2a26;
+  --color-ink-soft: #6b6759;
+  --color-ink-faint: #a19c8c;
+
+  --color-primary: #4f8a72;
+  --color-primary-soft: #e3ede8;
+  --color-primary-dark: #386353;
+
+  --color-amber: #c98a3c;
+  --color-amber-soft: #f6ead4;
+
+  --color-critical: #b5544a;
+  --color-critical-soft: #f4e3e0;
+
+  /* categorical chart palette (validated, fixed order: blue, orange, aqua, yellow) */
+  --color-food: #2a78d6;
+  --color-transport: #eb6834;
+  --color-leisure: #1baf7a;
+  --color-other: #eda100;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1c1b18;
+    --color-surface: #26251f;
+    --color-surface-muted: #2f2e27;
+    --color-border: #3a382f;
+
+    --color-ink: #f2efe6;
+    --color-ink-soft: #b8b3a3;
+    --color-ink-faint: #7d7969;
+
+    --color-primary: #6fae93;
+    --color-primary-soft: #2c3b34;
+    --color-primary-dark: #8fc4ab;
+
+    --color-amber: #dba766;
+    --color-amber-soft: #3a3226;
+
+    --color-critical: #d47b70;
+    --color-critical-soft: #3d2925;
+
+    --color-food: #3987e5;
+    --color-transport: #d95926;
+    --color-leisure: #199e70;
+    --color-other: #c98500;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--color-bg);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* remove number input spinners for a cleaner amount field */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
