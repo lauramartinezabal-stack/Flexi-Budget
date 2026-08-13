@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f8f6;
+  --surface: #ffffff;
+  --surface-muted: #eef1ee;
+  --foreground: #1e2723;
+  --foreground-muted: #5c6b63;
+  --border: #e2e6e1;
+
+  --primary: #2f8f7f;
+  --primary-soft: #e2f2ee;
+  --primary-strong: #1f6e61;
+
+  --accent: #6c8fc7;
+  --accent-soft: #e7edf7;
+
+  --warn: #c98a3a;
+  --warn-soft: #faf0df;
+
+  --danger: #c2564f;
+  --danger-soft: #fbeae8;
+
+  --cat-food: #2f8f7f;
+  --cat-transport: #6c8fc7;
+  --cat-leisure: #c98a3a;
+  --cat-other: #9a8fb5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-strong: var(--primary-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-cat-food: var(--cat-food);
+  --color-cat-transport: var(--cat-transport);
+  --color-cat-leisure: var(--cat-leisure);
+  --color-cat-other: var(--cat-other);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #101513;
+    --surface: #171e1b;
+    --surface-muted: #1e2622;
+    --foreground: #eaefec;
+    --foreground-muted: #9db0a6;
+    --border: #2a332e;
+
+    --primary: #4cb3a0;
+    --primary-soft: #1c332e;
+    --primary-strong: #6ecab8;
+
+    --accent: #8fb0e0;
+    --accent-soft: #202a3a;
+
+    --warn: #e0ab6a;
+    --warn-soft: #3a2f1c;
+
+    --danger: #e08078;
+    --danger-soft: #3a2320;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
