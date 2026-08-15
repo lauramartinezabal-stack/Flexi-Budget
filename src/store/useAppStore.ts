@@ -2,11 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { genId } from '../lib/id'
 import { todayISO } from '../lib/format'
+import { addMonthsISO } from '../lib/budget'
 import type {
   AppNotification,
   Category,
   FixedExpense,
   IncomeEntry,
+  RecurrenceRule,
   SavingsGoal,
   Settings,
   VariableExpense,
@@ -20,11 +22,22 @@ interface AppState {
   notifications: AppNotification[]
   settings: Settings
 
-  addIncome: (input: { amount: number; source?: string; date: string }) => void
+  addIncome: (input: {
+    amount: number
+    source?: string
+    date: string
+    recurring?: RecurrenceRule
+  }) => void
   removeIncome: (id: string) => void
 
-  addFixedExpense: (input: { name: string; amount: number; dueDate: string }) => void
+  addFixedExpense: (input: {
+    name: string
+    amount: number
+    dueDate: string
+    recurring?: RecurrenceRule
+  }) => void
   removeFixedExpense: (id: string) => void
+  /** One-off bills toggle paid/unpaid; recurring bills advance to the next monthly cycle. */
   toggleFixedExpensePaid: (id: string) => void
 
   addVariableExpense: (input: {
@@ -35,7 +48,14 @@ interface AppState {
   }) => void
   removeVariableExpense: (id: string) => void
 
-  addSavingsGoal: (input: { name: string; targetAmount: number; targetDate?: string }) => void
+  addSavingsGoal: (input: {
+    name: string
+    targetAmount?: number
+    targetDate?: string
+    monthlyContribution?: number
+    startDate?: string
+    endDate?: string
+  }) => void
   removeSavingsGoal: (id: string) => void
   toggleSavingsGoalAchieved: (id: string) => void
 
@@ -74,6 +94,7 @@ export const useAppStore = create<AppState>()(
               id: genId(),
               createdAt: new Date().toISOString(),
               paid: false,
+              totalPaidToDate: 0,
               ...input,
             },
           ],
@@ -84,9 +105,20 @@ export const useAppStore = create<AppState>()(
         })),
       toggleFixedExpensePaid: (id) =>
         set((state) => ({
-          fixedExpenses: state.fixedExpenses.map((e) =>
-            e.id === id ? { ...e, paid: !e.paid } : e,
-          ),
+          fixedExpenses: state.fixedExpenses.map((e) => {
+            if (e.id !== id) return e
+            if (!e.recurring) return { ...e, paid: !e.paid }
+            // Recurring bill: paying always advances to the next monthly cycle
+            // rather than toggling back — there's no "un-pay last month's rent".
+            const nextDue = addMonthsISO(e.dueDate, 1)
+            const seriesEnded = !!e.recurring.endDate && nextDue > e.recurring.endDate
+            return {
+              ...e,
+              totalPaidToDate: e.totalPaidToDate + e.amount,
+              dueDate: seriesEnded ? e.dueDate : nextDue,
+              paid: seriesEnded,
+            }
+          }),
         })),
 
       addVariableExpense: (input) =>

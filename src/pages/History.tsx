@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { effectiveSavingsTarget } from '../lib/budget'
 import { formatCurrency, formatDateHuman } from '../lib/format'
 import { CATEGORIES, type Category } from '../types'
 import { PageHeader } from '../components/PageHeader'
@@ -16,6 +17,7 @@ interface Row {
   sub?: string
   amount: number
   category?: Category
+  recurring?: boolean
 }
 
 export default function History() {
@@ -33,13 +35,19 @@ export default function History() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
+  const now = useMemo(() => new Date(), [])
+
   const rows: Row[] = useMemo(() => {
     const incomeRows: Row[] = incomes.map((i) => ({
       id: i.id,
       kind: 'income',
       date: i.date,
       label: i.source || 'Income',
+      sub: i.recurring
+        ? `${formatCurrency(i.amount, true)}/mo${i.recurring.endDate ? ` until ${formatDateHuman(i.recurring.endDate)}` : ''}`
+        : undefined,
       amount: i.amount,
+      recurring: !!i.recurring,
     }))
     const variableRows: Row[] = variableExpenses.map((e) => ({
       id: e.id,
@@ -55,21 +63,27 @@ export default function History() {
       kind: 'fixed',
       date: e.dueDate,
       label: e.name,
-      sub: e.paid ? 'Paid' : 'Upcoming bill',
+      sub: e.recurring ? 'Monthly bill' : e.paid ? 'Paid' : 'Upcoming bill',
       amount: -e.amount,
+      recurring: !!e.recurring,
     }))
     const savingsRows: Row[] = savingsGoals.map((g) => ({
       id: g.id,
       kind: 'savings',
-      date: g.targetDate ?? g.createdAt.slice(0, 10),
+      date: g.startDate ?? g.targetDate ?? g.createdAt.slice(0, 10),
       label: g.name,
-      sub: g.achieved ? 'Achieved' : 'Savings goal',
-      amount: -g.targetAmount,
+      sub: g.achieved
+        ? 'Achieved'
+        : g.monthlyContribution != null
+          ? `Monthly fund · ${formatCurrency(g.monthlyContribution, true)}/mo`
+          : 'Savings goal',
+      amount: -effectiveSavingsTarget(g, now),
+      recurring: g.monthlyContribution != null,
     }))
     return [...incomeRows, ...variableRows, ...fixedRows, ...savingsRows].sort((a, b) =>
       b.date.localeCompare(a.date),
     )
-  }, [incomes, variableExpenses, fixedExpenses, savingsGoals])
+  }, [incomes, variableExpenses, fixedExpenses, savingsGoals, now])
 
   const filtered = rows.filter((r) => {
     if (typeFilter !== 'all' && r.kind !== typeFilter) return false
@@ -130,7 +144,10 @@ export default function History() {
               {filtered.map((r) => (
                 <li key={`${r.kind}-${r.id}`} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-brand-900 truncate">{r.label}</p>
+                    <p className="text-[14px] font-medium text-brand-900 truncate">
+                      {r.recurring && r.kind !== 'savings' && '🔁 '}
+                      {r.label}
+                    </p>
                     <p className="text-[12px] text-gray-400">
                       {formatDateHuman(r.date)}
                       {r.sub ? ` · ${r.sub}` : ''}
@@ -146,7 +163,7 @@ export default function History() {
                             : 'text-brand-600'
                       }`}
                     >
-                      {r.kind === 'savings' ? '🐷 ' : r.amount < 0 ? '-' : '+'}
+                      {r.kind === 'savings' ? (r.recurring ? '🏦 ' : '🐷 ') : r.amount < 0 ? '-' : '+'}
                       {formatCurrency(Math.abs(r.amount), true)}
                     </span>
                     <button

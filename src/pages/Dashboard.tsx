@@ -1,7 +1,12 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
-import { computeAverageWeeklySpend, computeBudget, computeCategorySplit } from '../lib/budget'
+import {
+  computeAverageWeeklySpend,
+  computeBudget,
+  computeCategorySplit,
+  effectiveSavingsTarget,
+} from '../lib/budget'
 import { formatCurrency, formatDateShort } from '../lib/format'
 import { Card } from '../components/Card'
 import { ProgressBar } from '../components/ProgressBar'
@@ -110,12 +115,16 @@ export default function Dashboard() {
                 return (
                   <li key={exp.id}>
                     <div className="flex items-center justify-between text-[14px]">
-                      <span className="font-medium text-brand-900">{exp.name}</span>
+                      <span className="font-medium text-brand-900">
+                        {exp.recurring && '🔁 '}
+                        {exp.name}
+                      </span>
                       <span className="text-gray-500">{formatDateShort(exp.dueDate)}</span>
                     </div>
                     <div className="flex items-center justify-between mt-1 mb-1.5">
                       <span className="text-[12px] text-gray-400">
                         {formatCurrency(reserved)} reserved of {formatCurrency(exp.amount)}
+                        {exp.recurring && ' · monthly'}
                       </span>
                       <button
                         onClick={() => toggleFixedExpensePaid(exp.id)}
@@ -145,28 +154,42 @@ export default function Dashboard() {
         >
           {unachievedGoals.length === 0 ? (
             <p className="text-sm text-gray-400">
-              No goals yet. Add one and we'll set money aside for it once your bills are covered.
+              No goals yet. Add a one-off goal or a monthly fund and we'll set money aside once
+              your bills are covered.
             </p>
           ) : (
             <ul className="space-y-4">
               {unachievedGoals.map((goal) => {
+                const isFund = goal.monthlyContribution != null
                 const r = summary.savingsReservations[goal.id]
                 const reserved = r?.reserved ?? 0
-                const pct = goal.targetAmount > 0 ? reserved / goal.targetAmount : 0
-                const complete = pct >= 1
+                const target = effectiveSavingsTarget(goal, now)
+                const pct = target > 0 ? reserved / target : 0
+                const fullyFunded = pct >= 1
+                const goalComplete = !isFund && fullyFunded
                 return (
                   <li key={goal.id}>
                     <div className="flex items-center justify-between text-[14px]">
-                      <span className="font-medium text-brand-900">🐷 {goal.name}</span>
+                      <span className="font-medium text-brand-900">
+                        {isFund ? '🏦' : '🐷'} {goal.name}
+                      </span>
                       <span className="text-gray-500">
-                        {goal.targetDate ? formatDateShort(goal.targetDate) : 'No deadline'}
+                        {isFund
+                          ? goal.endDate
+                            ? `Until ${formatDateShort(goal.endDate)}`
+                            : 'Ongoing'
+                          : goal.targetDate
+                            ? formatDateShort(goal.targetDate)
+                            : 'No deadline'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-1 mb-1.5">
                       <span className="text-[12px] text-gray-400">
-                        {formatCurrency(reserved)} saved of {formatCurrency(goal.targetAmount)}
+                        {isFund
+                          ? `${formatCurrency(reserved)} saved · ${formatCurrency(goal.monthlyContribution ?? 0)}/mo`
+                          : `${formatCurrency(reserved)} saved of ${formatCurrency(goal.targetAmount ?? 0)}`}
                       </span>
-                      {complete && (
+                      {goalComplete && (
                         <button
                           onClick={() => toggleSavingsGoalAchieved(goal.id)}
                           className="text-[11px] font-semibold text-plum-500 hover:text-plum-700"
@@ -174,10 +197,18 @@ export default function Dashboard() {
                           Mark achieved
                         </button>
                       )}
+                      {isFund && (
+                        <button
+                          onClick={() => toggleSavingsGoalAchieved(goal.id)}
+                          className="text-[11px] font-semibold text-gray-400 hover:text-plum-700"
+                        >
+                          Close fund
+                        </button>
+                      )}
                     </div>
                     <ProgressBar
                       progress={pct}
-                      colorClassName={complete ? 'bg-plum-500' : 'bg-plum-300'}
+                      colorClassName={fullyFunded ? 'bg-plum-500' : 'bg-plum-300'}
                     />
                   </li>
                 )
@@ -190,8 +221,8 @@ export default function Dashboard() {
           <CategoryDonut items={categorySplit.items} total={weeklySpent} showCaps />
           <p className="text-[11px] text-gray-400 mt-3">
             {categorySplit.isPersonalized
-              ? "Caps are based on your usual spending split, so essentials stay covered."
-              : 'Starting with an even split across categories — this will adapt to your habits.'}
+              ? 'Caps are based on your usual spending split, so essentials stay covered.'
+              : 'Starting with a sensible default split — this will adapt to your habits after a bit more history.'}
           </p>
         </Card>
       </div>

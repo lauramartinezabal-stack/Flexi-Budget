@@ -8,6 +8,7 @@ import {
   AmountInput,
   Field,
   PrimaryButton,
+  RecurrenceFields,
   SegmentedControl,
   TextInput,
 } from '../components/FormFields'
@@ -56,12 +57,22 @@ function IncomeForm() {
   const [amount, setAmount] = useState('')
   const [source, setSource] = useState('')
   const [date, setDate] = useState(todayISO())
+  const [repeats, setRepeats] = useState(false)
+  const [hasEndDate, setHasEndDate] = useState(false)
+  const [endDate, setEndDate] = useState('')
 
-  const canSubmit = Number(amount) > 0
+  const canSubmit = Number(amount) > 0 && (!repeats || !hasEndDate || endDate.length > 0)
 
   function submit() {
     if (!canSubmit) return
-    addIncome({ amount: Number(amount), source: source.trim() || undefined, date })
+    addIncome({
+      amount: Number(amount),
+      source: source.trim() || undefined,
+      date,
+      recurring: repeats
+        ? { frequency: 'monthly', endDate: hasEndDate ? endDate : undefined }
+        : undefined,
+    })
     navigate('/')
   }
 
@@ -83,9 +94,24 @@ function IncomeForm() {
           onChange={(e) => setSource(e.target.value)}
         />
       </Field>
-      <Field label="Date">
+      <Field label={repeats ? 'Start date' : 'Date'}>
         <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayISO()} />
       </Field>
+      <RecurrenceFields
+        label="Repeats every month"
+        repeats={repeats}
+        onRepeatsChange={setRepeats}
+        hasEndDate={hasEndDate}
+        onHasEndDateChange={setHasEndDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        minEndDate={date}
+      />
+      {repeats && (
+        <p className="text-[12px] text-gray-400 -mt-1">
+          We'll count this every month from the start date automatically — no need to log it again.
+        </p>
+      )}
       <PrimaryButton type="submit" disabled={!canSubmit}>
         Add income
       </PrimaryButton>
@@ -158,12 +184,26 @@ function FixedForm() {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [repeats, setRepeats] = useState(false)
+  const [hasEndDate, setHasEndDate] = useState(false)
+  const [endDate, setEndDate] = useState('')
 
-  const canSubmit = Number(amount) > 0 && name.trim().length > 0 && dueDate.length > 0
+  const canSubmit =
+    Number(amount) > 0 &&
+    name.trim().length > 0 &&
+    dueDate.length > 0 &&
+    (!repeats || !hasEndDate || endDate.length > 0)
 
   function submit() {
     if (!canSubmit) return
-    addFixedExpense({ name: name.trim(), amount: Number(amount), dueDate })
+    addFixedExpense({
+      name: name.trim(),
+      amount: Number(amount),
+      dueDate,
+      recurring: repeats
+        ? { frequency: 'monthly', endDate: hasEndDate ? endDate : undefined }
+        : undefined,
+    })
     navigate('/')
   }
 
@@ -181,20 +221,51 @@ function FixedForm() {
       <Field label="Amount">
         <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
       </Field>
-      <Field label="Due date">
+      <Field label={repeats ? 'First due date' : 'Due date'}>
         <TextInput type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} min={todayISO()} />
       </Field>
+      <RecurrenceFields
+        label="Repeats every month"
+        repeats={repeats}
+        onRepeatsChange={setRepeats}
+        hasEndDate={hasEndDate}
+        onHasEndDateChange={setHasEndDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        minEndDate={dueDate || todayISO()}
+      />
       <p className="text-[12px] text-gray-400 -mt-1">
         We'll set aside money for this automatically, prioritizing whichever bill is due soonest.
+        {repeats && ' Once you mark a cycle paid, the next month is scheduled automatically.'}
       </p>
       <PrimaryButton type="submit" disabled={!canSubmit}>
-        Add upcoming bill
+        {repeats ? 'Add monthly bill' : 'Add upcoming bill'}
       </PrimaryButton>
     </form>
   )
 }
 
+type SavingsMode = 'goal' | 'fund'
+
 function SavingsForm() {
+  const [mode, setMode] = useState<SavingsMode>('goal')
+
+  return (
+    <div className="space-y-4">
+      <SegmentedControl
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: 'goal', label: 'One-off goal' },
+          { value: 'fund', label: 'Monthly fund' },
+        ]}
+      />
+      {mode === 'goal' ? <SavingsGoalForm /> : <SavingsFundForm />}
+    </div>
+  )
+}
+
+function SavingsGoalForm() {
   const navigate = useNavigate()
   const addSavingsGoal = useAppStore((s) => s.addSavingsGoal)
   const [name, setName] = useState('')
@@ -223,7 +294,7 @@ function SavingsForm() {
     >
       <Field label="What are you saving for?">
         <TextInput
-          placeholder="New laptop, trip home, emergency fund…"
+          placeholder="New laptop, trip home, new bag…"
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
@@ -241,6 +312,75 @@ function SavingsForm() {
       </p>
       <PrimaryButton type="submit" disabled={!canSubmit}>
         Add savings goal
+      </PrimaryButton>
+    </form>
+  )
+}
+
+function SavingsFundForm() {
+  const navigate = useNavigate()
+  const addSavingsGoal = useAppStore((s) => s.addSavingsGoal)
+  const [name, setName] = useState('')
+  const [amount, setAmount] = useState('')
+  const [startDate, setStartDate] = useState(todayISO())
+  const [hasEndDate, setHasEndDate] = useState(false)
+  const [endDate, setEndDate] = useState('')
+
+  const canSubmit = Number(amount) > 0 && name.trim().length > 0 && (!hasEndDate || endDate.length > 0)
+
+  function submit() {
+    if (!canSubmit) return
+    addSavingsGoal({
+      name: name.trim(),
+      monthlyContribution: Number(amount),
+      startDate,
+      endDate: hasEndDate ? endDate : undefined,
+    })
+    navigate('/')
+  }
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        submit()
+      }}
+    >
+      <Field label="Fund name">
+        <TextInput
+          placeholder="Emergency fund, general savings…"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+      </Field>
+      <Field label="Amount per month">
+        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
+      </Field>
+      <Field label="Start date">
+        <TextInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={todayISO()} />
+      </Field>
+      <div className="rounded-xl border border-sand-200 bg-white px-3.5 py-2.5 space-y-2">
+        <span className="block text-[14px] font-medium text-brand-900">Ends</span>
+        <SegmentedControl
+          value={hasEndDate ? 'until' : 'indefinite'}
+          onChange={(v) => setHasEndDate(v === 'until')}
+          options={[
+            { value: 'indefinite', label: 'Never — ongoing' },
+            { value: 'until', label: 'On a date' },
+          ]}
+        />
+        {hasEndDate && (
+          <TextInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate} />
+        )}
+      </div>
+      <p className="text-[12px] text-gray-400 -mt-1">
+        We'll grow this fund by that amount every month, gradually, out of whatever's left after
+        your bills — no fixed target, so it never "completes." Close it any time.
+      </p>
+      <PrimaryButton type="submit" disabled={!canSubmit}>
+        Add monthly fund
       </PrimaryButton>
     </form>
   )

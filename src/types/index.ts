@@ -7,30 +7,51 @@ export const CATEGORIES: { id: Category; label: string; icon: string }[] = [
   { id: 'other', label: 'Other', icon: '🧾' },
 ]
 
+/** Only monthly recurrence is supported for now — covers scholarships, rent, subscriptions. */
+export interface RecurrenceRule {
+  frequency: 'monthly'
+  /** ISO date; undefined means it repeats indefinitely */
+  endDate?: string
+}
+
 export interface IncomeEntry {
   id: string
   amount: number
   source?: string
-  date: string // ISO date (yyyy-MM-dd)
+  date: string // ISO date (yyyy-MM-dd) — the start date when recurring is set
   createdAt: string // ISO timestamp
+  recurring?: RecurrenceRule
 }
 
 export interface FixedExpense {
   id: string
   name: string
   amount: number
-  dueDate: string // ISO date (yyyy-MM-dd)
-  createdAt: string // ISO timestamp, start of the reservation ramp
+  dueDate: string // ISO date — current/next due date; advances a month at a time when recurring
+  createdAt: string // ISO timestamp
   paid: boolean
+  recurring?: RecurrenceRule
+  /** cumulative amount paid across past cycles of a recurring bill */
+  totalPaidToDate: number
 }
 
 export interface SavingsGoal {
   id: string
   name: string
-  targetAmount: number
-  targetDate?: string // ISO date (yyyy-MM-dd), optional
   createdAt: string // ISO timestamp
   achieved: boolean
+  // A goal is either a one-off target amount, or a recurring monthly
+  // contribution fund that grows over time — never both.
+  /** one-off target amount, e.g. "New laptop, €500" */
+  targetAmount?: number
+  /** optional deadline for a one-off target */
+  targetDate?: string
+  /** recurring fund contribution per month, e.g. "Emergency fund, €50/month" */
+  monthlyContribution?: number
+  /** anchor date contributions start counting from (required if monthlyContribution is set) */
+  startDate?: string
+  /** optional end date for the recurring contribution; undefined = indefinite */
+  endDate?: string
 }
 
 export interface VariableExpense {

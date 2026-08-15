@@ -1,4 +1,5 @@
 import {
+  addMonths,
   differenceInCalendarDays,
   differenceInCalendarWeeks,
   endOfWeek,
@@ -13,6 +14,34 @@ const WEEK_OPTIONS = { weekStartsOn: 1 as const } // Monday
 
 export function parseDate(iso: string): Date {
   return new Date(iso + (iso.length === 10 ? 'T00:00:00' : ''))
+}
+
+export function formatISODate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+/** Advances an ISO date by n months, clamped to the end of the resulting month. */
+export function addMonthsISO(iso: string, n: number): string {
+  return formatISODate(addMonths(parseDate(iso), n))
+}
+
+/**
+ * How many monthly occurrences of a recurring amount have happened by `asOf`,
+ * counting the start date itself as the first occurrence. Used for both
+ * recurring income ("scholarship, €300/month since Sep") and recurring
+ * savings contributions.
+ */
+export function countMonthlyOccurrences(
+  startDateIso: string,
+  endDateIso: string | undefined,
+  asOf: Date,
+): number {
+  const start = parseDate(startDateIso)
+  const cutoff = endDateIso && parseDate(endDateIso) < asOf ? parseDate(endDateIso) : asOf
+  if (cutoff < start) return 0
+  let n = 0
+  while (addMonths(start, n) <= cutoff) n++
+  return n
 }
 
 export function getCurrentWeekRange(asOf: Date = new Date()) {
@@ -36,6 +65,18 @@ export interface ReservationResult {
   reserved: number
   /** 0-1 share of the full amount that's covered so far */
   coverage: number
+}
+
+/**
+ * The amount a savings goal should have by now: the flat target for a
+ * one-off goal, or however much a monthly fund has accrued so far.
+ */
+export function effectiveSavingsTarget(goal: SavingsGoal, asOf: Date): number {
+  if (goal.monthlyContribution != null && goal.startDate) {
+    const months = countMonthlyOccurrences(goal.startDate, goal.endDate, asOf)
+    return goal.monthlyContribution * months
+  }
+  return goal.targetAmount ?? 0
 }
 
 export interface BudgetSummary {
@@ -71,14 +112,20 @@ export function computeBudget(
   defaultHorizonWeeks: number,
   asOf: Date = new Date(),
 ): BudgetSummary {
-  const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0)
+  const totalIncome = incomes.reduce(
+    (sum, i) =>
+      sum + (i.recurring ? i.amount * countMonthlyOccurrences(i.date, i.recurring.endDate, asOf) : i.amount),
+    0,
+  )
   const totalVariableSpent = variableExpenses.reduce((sum, e) => sum + e.amount, 0)
-  const paidFixed = fixedExpenses.filter((e) => e.paid)
   const unpaidFixed = fixedExpenses.filter((e) => !e.paid)
-  const totalPaidFixed = paidFixed.reduce((sum, e) => sum + e.amount, 0)
+  const totalPaidFixed = fixedExpenses.reduce(
+    (sum, e) => sum + (e.recurring ? e.totalPaidToDate : e.paid ? e.amount : 0),
+    0,
+  )
   const achievedGoals = savingsGoals.filter((g) => g.achieved)
   const unachievedGoals = savingsGoals.filter((g) => !g.achieved)
-  const totalSaved = achievedGoals.reduce((sum, g) => sum + g.targetAmount, 0)
+  const totalSaved = achievedGoals.reduce((sum, g) => sum + effectiveSavingsTarget(g, asOf), 0)
 
   const currentBalance = totalIncome - totalVariableSpent - totalPaidFixed - totalSaved
 
@@ -111,11 +158,12 @@ export function computeBudget(
   })
   const savingsReservations: Record<string, ReservationResult> = {}
   for (const goal of goalsByPriority) {
-    const reserved = Math.min(goal.targetAmount, remainingCash)
+    const target = effectiveSavingsTarget(goal, asOf)
+    const reserved = Math.min(target, remainingCash)
     remainingCash -= reserved
     savingsReservations[goal.id] = {
       reserved,
-      coverage: goal.targetAmount > 0 ? reserved / goal.targetAmount : 1,
+      coverage: target > 0 ? reserved / target : 1,
     }
   }
   const totalReservedSavings = Object.values(savingsReservations).reduce(
@@ -194,10 +242,26 @@ export interface CategoryCapItem extends CategoryBreakdownItem {
 }
 
 /**
- * Splits "available this week" across categories using the user's own
- * historical spending ratio, so essentials that are usually funded (like
- * food) don't quietly get crowded out by one-off discretionary spending.
- * Falls back to an even split until there's enough history to learn from.
+ * A sensible starting split before we know anything about the user: food is
+ * the biggest necessity, transport modest, leisure meaningful but capped,
+ * other is a small buffer. Used until there's enough logged history to trust
+ * their own pattern instead.
+ */
+export const DEFAULT_CATEGORY_SPLIT: Record<Category, number> = {
+  food: 0.4,
+  transport: 0.15,
+  leisure: 0.25,
+  other: 0.2,
+}
+
+/** Minimum logged expenses before switching from the sensible default to a learned split. */
+const MIN_HISTORY_FOR_PERSONALIZATION = 8
+
+/**
+ * Splits "available this week" across categories. Starts from a sensible
+ * default split (food gets the biggest share, since it's the necessity most
+ * likely to get crowded out by discretionary spending) and switches to the
+ * user's own historical ratio once there's enough logged history to trust it.
  */
 export function computeCategorySplit(
   weeklyAvailable: number,
@@ -209,7 +273,7 @@ export function computeCategorySplit(
   const spentThisWeekByCategory = getCategoryBreakdownForRange(variableExpenses, start, end)
 
   const historyTotal = variableExpenses.reduce((sum, e) => sum + e.amount, 0)
-  const isPersonalized = historyTotal > 0
+  const isPersonalized = variableExpenses.length >= MIN_HISTORY_FOR_PERSONALIZATION && historyTotal > 0
   const historyByCategory = new Map<Category, number>()
   for (const c of CATEGORIES) historyByCategory.set(c.id, 0)
   for (const e of variableExpenses) {
@@ -217,7 +281,7 @@ export function computeCategorySplit(
   }
 
   const items: CategoryCapItem[] = CATEGORIES.map((c) => {
-    const ratio = isPersonalized ? (historyByCategory.get(c.id) ?? 0) / historyTotal : 1 / CATEGORIES.length
+    const ratio = isPersonalized ? (historyByCategory.get(c.id) ?? 0) / historyTotal : DEFAULT_CATEGORY_SPLIT[c.id]
     const cap = spendableThisWeek * ratio
     const spentThisWeek =
       spentThisWeekByCategory.items.find((i) => i.category === c.id)?.total ?? 0
