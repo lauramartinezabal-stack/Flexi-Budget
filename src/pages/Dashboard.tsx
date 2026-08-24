@@ -75,9 +75,7 @@ export default function Dashboard() {
           <p className={`text-[13px] mt-2 ${tone.sub}`}>
             {incomes.length === 0
               ? 'Log your first income to see this update'
-              : summary.nearestDueDate
-                ? `Spread over ${summary.horizonWeeks} week${summary.horizonWeeks > 1 ? 's' : ''} until your next fixed expense on ${formatDateShort(summary.nearestDueDate)}`
-                : `Spread over your default ${summary.horizonWeeks}-week horizon`}
+              : `Spread over your ${summary.horizonWeeks}-week horizon, after setting aside your bills and savings`}
           </p>
         </section>
 

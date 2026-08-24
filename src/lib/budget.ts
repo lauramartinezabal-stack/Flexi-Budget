@@ -176,15 +176,14 @@ export function computeBudget(
   const upcoming = unpaidFixed
     .filter((e) => differenceInCalendarDays(parseDate(e.dueDate), asOf) >= 0)
     .sort((a, b) => parseDate(a.dueDate).getTime() - parseDate(b.dueDate).getTime())
+  const nearestDueDate: string | null = upcoming.length > 0 ? upcoming[0].dueDate : null
 
-  let horizonWeeks = defaultHorizonWeeks
-  let nearestDueDate: string | null = null
-  if (upcoming.length > 0) {
-    nearestDueDate = upcoming[0].dueDate
-    const daysUntil = differenceInCalendarDays(parseDate(nearestDueDate), asOf)
-    horizonWeeks = Math.max(1, Math.ceil((daysUntil + 1) / 7))
-  }
-
+  // The horizon is a stable pacing assumption ("plan as if no new income for
+  // N weeks"), not tied to bill due dates — bills are already fully protected
+  // by the reservation above. Shrinking the horizon to match a near due date
+  // would divide the *already-safe* leftover across fewer weeks, making the
+  // weekly figure spike upward the closer a bill gets, which is backwards.
+  const horizonWeeks = Math.max(1, defaultHorizonWeeks)
   const weeklyAvailable = freeBalance / horizonWeeks
 
   return {
