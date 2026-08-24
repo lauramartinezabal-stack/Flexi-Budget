@@ -17,7 +17,7 @@ export default defineConfig({
         name: 'Flexi Budget',
         short_name: 'Flexi Budget',
         description: 'A dynamic weekly budget for students with irregular income.',
-        theme_color: '#2f9c8e',
+        theme_color: '#408b7d',
         background_color: '#faf9f6',
         display: 'standalone',
         start_url: '.',
