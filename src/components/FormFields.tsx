@@ -24,11 +24,14 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   )
 }
 
-export function AmountInput(props: InputHTMLAttributes<HTMLInputElement>) {
+export function AmountInput({
+  symbol = '€',
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { symbol?: string }) {
   return (
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[22px] font-semibold text-brand-300">
-        $
+        {symbol}
       </span>
       <input
         type="number"

@@ -1,18 +1,23 @@
-const currencyFormatter = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-})
+import type { CurrencyCode } from '../types'
 
-const currencyFormatterPrecise = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-})
+const formatterCache = new Map<string, Intl.NumberFormat>()
 
-export function formatCurrency(amount: number, precise = false): string {
-  const formatter = precise ? currencyFormatterPrecise : currencyFormatter
-  return formatter.format(Number.isFinite(amount) ? amount : 0)
+function getFormatter(currency: CurrencyCode, precise: boolean): Intl.NumberFormat {
+  const key = `${currency}-${precise}`
+  let formatter = formatterCache.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: precise ? 2 : 0,
+    })
+    formatterCache.set(key, formatter)
+  }
+  return formatter
+}
+
+export function formatCurrency(amount: number, currency: CurrencyCode, precise = false): string {
+  return getFormatter(currency, precise).format(Number.isFinite(amount) ? amount : 0)
 }
 
 export function formatDateHuman(iso: string): string {

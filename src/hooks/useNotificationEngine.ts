@@ -41,16 +41,22 @@ export function useNotificationEngine() {
     const earliest = activityDates.length > 0 ? activityDates.sort()[0] : null
     const { start: lastWeekStart } = getPreviousWeekRange(now)
     if (earliest && parseDate(earliest) <= lastWeekStart) {
-      const weekly = buildWeeklySummaryNotification(variableExpenses, summary.weeklyAvailable, now)
+      const weekly = buildWeeklySummaryNotification(
+        variableExpenses,
+        summary.weeklyAvailable,
+        settings.currency,
+        now,
+      )
       addNotificationIfNew(weekly)
     }
 
     const approaching = buildFixedExpenseApproachingNotifications(
       fixedExpenses,
       summary.reservations,
+      settings.currency,
       now,
     )
     for (const n of approaching) addNotificationIfNew(n)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomes, fixedExpenses, variableExpenses, savingsGoals, settings.defaultHorizonWeeks])
+  }, [incomes, fixedExpenses, variableExpenses, savingsGoals, settings.defaultHorizonWeeks, settings.currency])
 }

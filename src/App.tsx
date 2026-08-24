@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import AddEntry from './pages/AddEntry'
 import History from './pages/History'
 import Alerts from './pages/Alerts'
+import Settings from './pages/Settings'
 
 function AppShell() {
   useNotificationEngine()
@@ -17,6 +18,7 @@ function AppShell() {
           <Route path="/add" element={<AddEntry />} />
           <Route path="/history" element={<History />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
       <BottomNav />

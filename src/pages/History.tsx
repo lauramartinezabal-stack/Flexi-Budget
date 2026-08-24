@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { effectiveSavingsTarget } from '../lib/budget'
-import { formatCurrency, formatDateHuman } from '../lib/format'
+import { formatDateHuman } from '../lib/format'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { CATEGORIES, type Category } from '../types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
@@ -21,6 +22,7 @@ interface Row {
 }
 
 export default function History() {
+  const { format } = useFormatCurrency()
   const incomes = useAppStore((s) => s.incomes)
   const variableExpenses = useAppStore((s) => s.variableExpenses)
   const fixedExpenses = useAppStore((s) => s.fixedExpenses)
@@ -44,7 +46,7 @@ export default function History() {
       date: i.date,
       label: i.source || 'Income',
       sub: i.recurring
-        ? `${formatCurrency(i.amount, true)}/mo${i.recurring.endDate ? ` until ${formatDateHuman(i.recurring.endDate)}` : ''}`
+        ? `${format(i.amount, true)}/mo${i.recurring.endDate ? ` until ${formatDateHuman(i.recurring.endDate)}` : ''}`
         : undefined,
       amount: i.amount,
       recurring: !!i.recurring,
@@ -75,7 +77,7 @@ export default function History() {
       sub: g.achieved
         ? 'Achieved'
         : g.monthlyContribution != null
-          ? `Monthly fund · ${formatCurrency(g.monthlyContribution, true)}/mo`
+          ? `Monthly fund · ${format(g.monthlyContribution, true)}/mo`
           : 'Savings goal',
       amount: -effectiveSavingsTarget(g, now),
       recurring: g.monthlyContribution != null,
@@ -83,7 +85,7 @@ export default function History() {
     return [...incomeRows, ...variableRows, ...fixedRows, ...savingsRows].sort((a, b) =>
       b.date.localeCompare(a.date),
     )
-  }, [incomes, variableExpenses, fixedExpenses, savingsGoals, now])
+  }, [incomes, variableExpenses, fixedExpenses, savingsGoals, now, format])
 
   const filtered = rows.filter((r) => {
     if (typeFilter !== 'all' && r.kind !== typeFilter) return false
@@ -164,7 +166,7 @@ export default function History() {
                       }`}
                     >
                       {r.kind === 'savings' ? (r.recurring ? '🏦 ' : '🐷 ') : r.amount < 0 ? '-' : '+'}
-                      {formatCurrency(Math.abs(r.amount), true)}
+                      {format(Math.abs(r.amount), true)}
                     </span>
                     <button
                       onClick={() => remove(r)}

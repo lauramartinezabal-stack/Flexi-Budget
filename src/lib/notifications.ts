@@ -1,7 +1,7 @@
 import { differenceInCalendarDays, getISOWeek, getISOWeekYear } from 'date-fns'
 import { formatCurrency } from './format'
 import { getCategoryBreakdownForRange, getPreviousWeekRange } from './budget'
-import type { AppNotification, FixedExpense, VariableExpense } from '../types'
+import type { AppNotification, CurrencyCode, FixedExpense, VariableExpense } from '../types'
 
 const APPROACHING_WINDOW_DAYS = 14
 
@@ -13,6 +13,7 @@ const APPROACHING_WINDOW_DAYS = 14
 export function buildWeeklySummaryNotification(
   variableExpenses: VariableExpense[],
   weeklyAvailable: number,
+  currency: CurrencyCode,
   asOf: Date,
 ): AppNotification {
   const { anchor, start, end } = getPreviousWeekRange(asOf)
@@ -22,15 +23,15 @@ export function buildWeeklySummaryNotification(
 
   const breakdown =
     nonZero.length > 0
-      ? nonZero.map((i) => `${i.icon} ${i.label}: ${formatCurrency(i.total)}`).join('  •  ')
+      ? nonZero.map((i) => `${i.icon} ${i.label}: ${formatCurrency(i.total, currency)}`).join('  •  ')
       : 'No spending logged.'
 
   return {
     id: `weekly-${weekTag}`,
     kind: 'weekly-summary',
     createdAt: asOf.toISOString(),
-    title: `Last week: ${formatCurrency(total)} spent`,
-    body: `${breakdown}\nAvailable to spend this week: ${formatCurrency(weeklyAvailable)}`,
+    title: `Last week: ${formatCurrency(total, currency)} spent`,
+    body: `${breakdown}\nAvailable to spend this week: ${formatCurrency(weeklyAvailable, currency)}`,
     read: false,
   }
 }
@@ -38,6 +39,7 @@ export function buildWeeklySummaryNotification(
 export function buildFixedExpenseApproachingNotifications(
   fixedExpenses: FixedExpense[],
   reservations: Record<string, { reserved: number }>,
+  currency: CurrencyCode,
   asOf: Date,
 ): AppNotification[] {
   const monthTag = `${asOf.getFullYear()}-${String(asOf.getMonth() + 1).padStart(2, '0')}`
@@ -58,8 +60,10 @@ export function buildFixedExpenseApproachingNotifications(
       title: `"${expense.name}" is coming up`,
       body: `Due in ${daysUntil} day${daysUntil === 1 ? '' : 's'} (${formatCurrency(
         expense.amount,
-      )}). Reserved so far: ${formatCurrency(reserved)}. Still needed: ${formatCurrency(
+        currency,
+      )}). Reserved so far: ${formatCurrency(reserved, currency)}. Still needed: ${formatCurrency(
         remaining,
+        currency,
       )}.`,
       read: false,
     })

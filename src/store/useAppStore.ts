@@ -74,7 +74,7 @@ export const useAppStore = create<AppState>()(
       variableExpenses: [],
       savingsGoals: [],
       notifications: [],
-      settings: { defaultHorizonWeeks: 4 },
+      settings: { defaultHorizonWeeks: 4, currency: 'EUR' },
 
       addIncome: (input) =>
         set((state) => ({
@@ -176,7 +176,20 @@ export const useAppStore = create<AppState>()(
       updateSettings: (patch) =>
         set((state) => ({ settings: { ...state.settings, ...patch } })),
     }),
-    { name: 'flexi-budget-storage' },
+    {
+      name: 'flexi-budget-storage',
+      // Zustand's default merge is shallow, so a persisted `settings` object
+      // missing a newly-added key (like `currency` for existing installs)
+      // would otherwise wipe out the default entirely instead of falling back.
+      merge: (persisted, current) => {
+        const persistedState = (persisted ?? {}) as Partial<AppState>
+        return {
+          ...current,
+          ...persistedState,
+          settings: { ...current.settings, ...persistedState.settings },
+        }
+      },
+    },
   ),
 )
 

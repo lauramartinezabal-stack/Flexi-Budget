@@ -7,6 +7,17 @@ export const CATEGORIES: { id: Category; label: string; icon: string }[] = [
   { id: 'other', label: 'Other', icon: '🧾' },
 ]
 
+export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'MXN' | 'ARS' | 'COP'
+
+export const CURRENCIES: { code: CurrencyCode; label: string; symbol: string }[] = [
+  { code: 'EUR', label: 'Euro', symbol: '€' },
+  { code: 'USD', label: 'US Dollar', symbol: '$' },
+  { code: 'GBP', label: 'British Pound', symbol: '£' },
+  { code: 'MXN', label: 'Mexican Peso', symbol: '$' },
+  { code: 'ARS', label: 'Argentine Peso', symbol: '$' },
+  { code: 'COP', label: 'Colombian Peso', symbol: '$' },
+]
+
 /** Only monthly recurrence is supported for now — covers scholarships, rent, subscriptions. */
 export interface RecurrenceRule {
   frequency: 'monthly'
@@ -66,6 +77,8 @@ export interface VariableExpense {
 export interface Settings {
   /** Default number of weeks to spread free balance over when no fixed expense is upcoming */
   defaultHorizonWeeks: number
+  /** ISO 4217 currency code used to display and enter all amounts */
+  currency: CurrencyCode
   /** Last time notifications were generated, to avoid duplicate weekly/monthly notices */
   lastWeeklyNotificationAt?: string
   lastMonthlyCheckAt?: string

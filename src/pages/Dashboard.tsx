@@ -7,7 +7,8 @@ import {
   computeCategorySplit,
   effectiveSavingsTarget,
 } from '../lib/budget'
-import { formatCurrency, formatDateShort } from '../lib/format'
+import { formatDateShort } from '../lib/format'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { Card } from '../components/Card'
 import { ProgressBar } from '../components/ProgressBar'
 import { CategoryDonut } from '../components/CategoryDonut'
@@ -22,6 +23,7 @@ function heroTone(weeklyAvailable: number, avgWeeklySpend: number, hasIncome: bo
 }
 
 export default function Dashboard() {
+  const { format } = useFormatCurrency()
   const incomes = useAppStore((s) => s.incomes)
   const fixedExpenses = useAppStore((s) => s.fixedExpenses)
   const variableExpenses = useAppStore((s) => s.variableExpenses)
@@ -62,7 +64,31 @@ export default function Dashboard() {
 
   return (
     <div className="pb-8">
-      <PageHeader title="Flexi Budget" subtitle="Your dynamic weekly budget" />
+      <PageHeader
+        title="Flexi Budget"
+        subtitle="Your dynamic weekly budget"
+        action={
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="text-gray-400 hover:text-brand-600 p-1 -m-1"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M19.4 13.5a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19.5a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H4.5a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10.5a1.65 1.65 0 0 0 1-1.51V4.5a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10.5a1.65 1.65 0 0 0 1.51 1H19.5a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+        }
+      />
 
       <div className="px-5 space-y-4 mt-1">
         <section className={`rounded-2xl p-6 ${tone.bg} shadow-lg shadow-brand-900/10`}>
@@ -70,7 +96,7 @@ export default function Dashboard() {
             Available this week
           </p>
           <p className={`text-5xl font-bold mt-1.5 ${tone.text}`}>
-            {formatCurrency(summary.weeklyAvailable, true)}
+            {format(summary.weeklyAvailable, true)}
           </p>
           <p className={`text-[13px] mt-2 ${tone.sub}`}>
             {incomes.length === 0
@@ -121,7 +147,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between mt-1 mb-1.5">
                       <span className="text-[12px] text-gray-400">
-                        {formatCurrency(reserved)} reserved of {formatCurrency(exp.amount)}
+                        {format(reserved)} reserved of {format(exp.amount)}
                         {exp.recurring && ' · monthly'}
                       </span>
                       <button
@@ -184,8 +210,8 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mt-1 mb-1.5">
                       <span className="text-[12px] text-gray-400">
                         {isFund
-                          ? `${formatCurrency(reserved)} saved · ${formatCurrency(goal.monthlyContribution ?? 0)}/mo`
-                          : `${formatCurrency(reserved)} saved of ${formatCurrency(goal.targetAmount ?? 0)}`}
+                          ? `${format(reserved)} saved · ${format(goal.monthlyContribution ?? 0)}/mo`
+                          : `${format(reserved)} saved of ${format(goal.targetAmount ?? 0)}`}
                       </span>
                       {goalComplete && (
                         <button

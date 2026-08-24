@@ -1,6 +1,6 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import type { CategoryCapItem } from '../lib/budget'
-import { formatCurrency } from '../lib/format'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { ProgressBar } from './ProgressBar'
 
 const COLORS: Record<string, string> = {
@@ -19,6 +19,7 @@ export function CategoryDonut({
   total: number
   showCaps?: boolean
 }) {
+  const { format } = useFormatCurrency()
   const nonZero = items.filter((i) => i.total > 0)
   const data = nonZero.length > 0 ? nonZero : [{ category: 'other', label: 'No spending yet', icon: '', total: 1, percent: 1 }]
 
@@ -47,7 +48,7 @@ export function CategoryDonut({
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[13px] font-semibold text-brand-900">{formatCurrency(total)}</span>
+            <span className="text-[13px] font-semibold text-brand-900">{format(total)}</span>
             <span className="text-[10px] text-gray-400">spent</span>
           </div>
         </div>
@@ -61,7 +62,7 @@ export function CategoryDonut({
                 />
                 {item.icon} {item.label}
               </span>
-              <span className="font-medium text-brand-900">{formatCurrency(item.total)}</span>
+              <span className="font-medium text-brand-900">{format(item.total)}</span>
             </li>
           ))}
         </ul>
@@ -77,11 +78,11 @@ export function CategoryDonut({
                 </span>
                 {item.over > 0 ? (
                   <span className="text-[12px] text-amber-warn font-medium">
-                    {formatCurrency(item.over)} over plan
+                    {format(item.over)} over plan
                   </span>
                 ) : (
                   <span className="text-[12px] text-gray-500">
-                    {formatCurrency(item.remaining)} left of {formatCurrency(item.cap)}
+                    {format(item.remaining)} left of {format(item.cap)}
                   </span>
                 )}
               </div>

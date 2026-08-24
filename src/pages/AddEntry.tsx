@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import { todayISO } from '../lib/format'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { CATEGORIES, type Category } from '../types'
 import { PageHeader } from '../components/PageHeader'
 import {
@@ -53,6 +54,7 @@ export default function AddEntry() {
 
 function IncomeForm() {
   const navigate = useNavigate()
+  const { symbol } = useFormatCurrency()
   const addIncome = useAppStore((s) => s.addIncome)
   const [amount, setAmount] = useState('')
   const [source, setSource] = useState('')
@@ -85,7 +87,7 @@ function IncomeForm() {
       }}
     >
       <Field label="Amount">
-        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+        <AmountInput symbol={symbol} value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
       </Field>
       <Field label="Source (optional)">
         <TextInput
@@ -121,6 +123,7 @@ function IncomeForm() {
 
 function VariableForm() {
   const navigate = useNavigate()
+  const { symbol } = useFormatCurrency()
   const addVariableExpense = useAppStore((s) => s.addVariableExpense)
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState<Category>('food')
@@ -144,7 +147,7 @@ function VariableForm() {
       }}
     >
       <Field label="Amount">
-        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+        <AmountInput symbol={symbol} value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
       </Field>
       <Field label="Category">
         <div className="grid grid-cols-4 gap-2">
@@ -180,6 +183,7 @@ function VariableForm() {
 
 function FixedForm() {
   const navigate = useNavigate()
+  const { symbol } = useFormatCurrency()
   const addFixedExpense = useAppStore((s) => s.addFixedExpense)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -219,7 +223,7 @@ function FixedForm() {
         <TextInput placeholder="Tuition, rent, Netflix…" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </Field>
       <Field label="Amount">
-        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <AmountInput symbol={symbol} value={amount} onChange={(e) => setAmount(e.target.value)} />
       </Field>
       <Field label={repeats ? 'First due date' : 'Due date'}>
         <TextInput type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} min={todayISO()} />
@@ -267,6 +271,7 @@ function SavingsForm() {
 
 function SavingsGoalForm() {
   const navigate = useNavigate()
+  const { symbol } = useFormatCurrency()
   const addSavingsGoal = useAppStore((s) => s.addSavingsGoal)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -301,7 +306,7 @@ function SavingsGoalForm() {
         />
       </Field>
       <Field label="Target amount">
-        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <AmountInput symbol={symbol} value={amount} onChange={(e) => setAmount(e.target.value)} />
       </Field>
       <Field label="Target date (optional)">
         <TextInput type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} min={todayISO()} />
@@ -319,6 +324,7 @@ function SavingsGoalForm() {
 
 function SavingsFundForm() {
   const navigate = useNavigate()
+  const { symbol } = useFormatCurrency()
   const addSavingsGoal = useAppStore((s) => s.addSavingsGoal)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -356,7 +362,7 @@ function SavingsFundForm() {
         />
       </Field>
       <Field label="Amount per month">
-        <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <AmountInput symbol={symbol} value={amount} onChange={(e) => setAmount(e.target.value)} />
       </Field>
       <Field label="Start date">
         <TextInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={todayISO()} />
